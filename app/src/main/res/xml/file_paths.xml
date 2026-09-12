@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Carpeta donde se dejan los .xlsx generados antes de compartirlos. -->
+    <cache-path
+        name="exportes"
+        path="exportes/" />
+</paths>
