@@ -303,7 +303,7 @@ private fun FilaMuestra(
             }
         }
         if (mostrarCalculos) {
-            CeldaResultado("${r.promTotal.aTexto()} / ${r.promCrema.aTexto()}", ANCHO_TOTAL)
+            CeldaResultado("${r.promTotal.aTexto()} / ${r.promCrema}", ANCHO_TOTAL)
             CeldaResultado(r.porcCrema.aTexto(), ANCHO_PORC, destacado = true)
             CeldaResultado(r.porcGrasa.aTexto(), ANCHO_PORC, destacado = true)
             CeldaResultado(r.kcal.aTexto(), ANCHO_KCAL)

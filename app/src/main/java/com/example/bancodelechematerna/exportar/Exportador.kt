@@ -107,7 +107,7 @@ object Exportador {
                     add(numero(muestra.cremas[it]?.toDouble()))
                 }
                 add(numero(r.promTotal))
-                add(numero(r.promCrema))
+                add(numeroInt(r.promCrema))
                 add(numero(r.porcCrema))
                 add(numero(r.porcGrasa))
                 add(numero(r.kcal))

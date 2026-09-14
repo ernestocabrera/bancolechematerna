@@ -13,12 +13,16 @@ import java.util.zip.ZipOutputStream
 sealed interface Celda {
     data class Texto(val valor: String, val negrita: Boolean = false) : Celda
     data class Numero(val valor: Double, val negrita: Boolean = false) : Celda
+    data class NumeroInt(val valor: Int, val negrita: Boolean = false) : Celda
     data object Vacia : Celda
 }
 
 fun texto(valor: String, negrita: Boolean = false): Celda = Celda.Texto(valor, negrita)
 fun numero(valor: Double?, negrita: Boolean = false): Celda =
     if (valor == null) Celda.Vacia else Celda.Numero(valor, negrita)
+
+fun numeroInt(valor: Int?, negrita: Boolean = false): Celda =
+    if (valor == null) Celda.Vacia else Celda.NumeroInt(valor, negrita)
 
 class Hoja(nombre: String) {
     val nombre: String = limpiarNombre(nombre)
@@ -149,6 +153,11 @@ private fun celdaXml(celda: Celda, referencia: String): String = when (celda) {
         val estilo = if (celda.negrita) """ s="1"""" else ""
         """<c r="$referencia"$estilo><v>${recortar(celda.valor)}</v></c>"""
     }
+    is Celda.NumeroInt -> {
+        val estilo = if (celda.negrita) """ s="1"""" else ""
+        """<c r="$referencia"$estilo><v>${celda.valor}</v></c>"""
+    }
+
 }
 
 /** Evita notaciones tipo 1.0E2 y ceros de mas en el XML. */

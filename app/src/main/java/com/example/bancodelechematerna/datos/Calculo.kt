@@ -26,7 +26,7 @@ fun redondear(valor: Double, decimales: Int = 1): Double {
 /** Resultado de una fila. Cualquier campo puede ser null si faltan lecturas. */
 data class Resultado(
     val promTotal: Double? = null,   // P1: promedio de las columnas totales
-    val promCrema: Double? = null,   // P2: promedio de las columnas de crema
+    val promCrema: Int? = null,   // P2: promedio de las columnas de crema
     val porcCrema: Double? = null,
     val porcGrasa: Double? = null,
     val kcal: Double? = null,
@@ -38,7 +38,8 @@ data class Resultado(
  */
 fun calcular(totales: List<Int?>, cremas: List<Int?>): Resultado {
     val p1 = promedio(totales)
-    val p2 = promedio(cremas)
+    val p2 = cremas.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: 0
+    //val p2 = promedio(cremas)
     if (p1 == null || p2 == null || p1 == 0.0) return Resultado(p1, p2)
 
     val crema = redondear(p2 * 100.0 / p1)
