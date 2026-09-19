@@ -2,6 +2,7 @@ package com.example.bancodelechematerna.datos
 
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlin.math.round
 
 /**
  * Constantes del protocolo con el que se calcula en el banco de leche.
@@ -38,8 +39,8 @@ data class Resultado(
  */
 fun calcular(totales: List<Int?>, cremas: List<Int?>): Resultado {
     val p1 = promedio(totales)
-    val p2 = cremas.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: 0
-    //val p2 = promedio(cremas)
+    //val p2 = cremas.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: 0
+    val p2 = round(promedio(cremas)?:0.0).toInt()
     if (p1 == null || p2 == null || p1 == 0.0) return Resultado(p1, p2)
 
     val crema = redondear(p2 * 100.0 / p1)
