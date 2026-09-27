@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -303,10 +304,10 @@ private fun FilaMuestra(
             }
         }
         if (mostrarCalculos) {
-            CeldaResultado("${r.promTotal.aTexto()} / ${r.promCrema ?: "—"}", ANCHO_TOTAL)
+            CeldaResultado("${r.promTotal.aTexto()} : ${r.promCrema ?: "—"}", ANCHO_TOTAL, destacado = true)
             CeldaResultado(r.porcCrema.aTexto(), ANCHO_PORC, destacado = true)
             CeldaResultado(r.porcGrasa.aTexto(), ANCHO_PORC, destacado = true)
-            CeldaResultado(r.kcal.aTexto(), ANCHO_KCAL)
+            CeldaResultado(r.kcal.aTexto(), ANCHO_KCAL, destacado = true)
         }
         IconButton(onClick = alEliminar, modifier = Modifier.size(ANCHO_BORRAR)) {
             Icon(
@@ -412,8 +413,13 @@ private fun PieResumen(proceso: Proceso) {
         color = MaterialTheme.colorScheme.primaryContainer,
         tonalElevation = 3.dp,
     ) {
+        // El fondo llega hasta el borde, pero el contenido se aparta de la barra de
+        // navegacion. Con el teclado abierto, imePadding ya consumio ese espacio.
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

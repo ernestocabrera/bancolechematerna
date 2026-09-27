@@ -70,11 +70,11 @@ class ProcesosViewModel(app: Application) : AndroidViewModel(app) {
 
     fun agregarMuestra(procesoId: Long) {
         val proceso = proceso(procesoId) ?: return
-        val numero = proceso.siguienteNumero
         val orden = proceso.muestras.size
         viewModelScope.launch {
-            val id = withContext(hiloBd) { repo.crearMuestra(procesoId, orden, numero) }
-            editarProceso(procesoId) { it.copy(muestras = it.muestras + Muestra(id, numero)) }
+            // El Nro lo escribe el usuario: la fila nueva nace sin numero.
+            val id = withContext(hiloBd) { repo.crearMuestra(procesoId, orden, numero = "") }
+            editarProceso(procesoId) { it.copy(muestras = it.muestras + Muestra(id)) }
         }
     }
 

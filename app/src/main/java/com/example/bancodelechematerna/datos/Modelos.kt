@@ -43,13 +43,6 @@ data class Proceso(
             if (grasas.isEmpty()) return null
             return redondear(grasas.sum() / grasas.size)
         }
-
-    /** Numero que se le propone a la proxima fila: el ultimo numerico + 1. */
-    val siguienteNumero: String
-        get() {
-            val ultimo = muestras.lastOrNull()?.numero?.trim()?.toIntOrNull()
-            return if (ultimo != null) (ultimo + 1).toString() else (muestras.size + 1).toString()
-        }
 }
 
 /**
