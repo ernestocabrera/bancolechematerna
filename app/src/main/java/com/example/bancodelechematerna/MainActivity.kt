@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bancodelechematerna.ui.PantallaProceso
 import com.example.bancodelechematerna.ui.PantallaProcesos
 import com.example.bancodelechematerna.ui.ProcesosViewModel
+import com.example.bancodelechematerna.ui.Secciones
 import com.example.bancodelechematerna.ui.theme.BancoDeLecheMaternaTheme
 
 class MainActivity : ComponentActivity() {
@@ -37,8 +38,7 @@ private fun App(vm: ProcesosViewModel = viewModel()) {
     var abiertoId by rememberSaveable { mutableStateOf(-1L) }
     // Se guardan aqui y no dentro de la pantalla para que las preferencias no se pierdan
     // al volver a la lista y abrir otro proceso.
-    var mostrarLecturas by rememberSaveable { mutableStateOf(true) }
-    var mostrarCalculos by rememberSaveable { mutableStateOf(true) }
+    var secciones by rememberSaveable(stateSaver = Secciones.Guardado) { mutableStateOf(Secciones()) }
     val abierto = procesos.firstOrNull { it.id == abiertoId }
 
     if (abierto == null) {
@@ -53,17 +53,12 @@ private fun App(vm: ProcesosViewModel = viewModel()) {
         BackHandler { abiertoId = -1L }
         PantallaProceso(
             proceso = abierto,
-            mostrarLecturas = mostrarLecturas,
-            mostrarCalculos = mostrarCalculos,
-            alAlternarLecturas = { mostrarLecturas = !mostrarLecturas },
-            alAlternarCalculos = { mostrarCalculos = !mostrarCalculos },
+            secciones = secciones,
+            alCambiarSecciones = { secciones = it },
             alVolver = { abiertoId = -1L },
             alCambiarFecha = { vm.cambiarFecha(abierto.id, it) },
             alAgregarMuestra = { vm.agregarMuestra(abierto.id) },
-            alCambiarNumero = { muestraId, texto -> vm.cambiarNumero(abierto.id, muestraId, texto) },
-            alCambiarLectura = { muestraId, indice, texto ->
-                vm.cambiarLectura(abierto.id, muestraId, indice, texto)
-            },
+            alEditarMuestra = { muestraId, cambio -> vm.editarMuestra(abierto.id, muestraId, cambio) },
             alEliminarMuestra = { vm.eliminarMuestra(abierto.id, it) },
         )
     }

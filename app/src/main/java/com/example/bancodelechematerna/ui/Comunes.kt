@@ -4,13 +4,16 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,11 +22,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.example.bancodelechematerna.datos.Proceso
+import com.example.bancodelechematerna.datos.horaGuardada
+import com.example.bancodelechematerna.datos.horaYMinutos
 import com.example.bancodelechematerna.exportar.Exportador
 import com.example.bancodelechematerna.exportar.TIPO_XLSX
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +51,47 @@ fun SelectorFecha(
     ) {
         DatePicker(state = estado)
     }
+}
+
+/**
+ * Reloj para elegir la hora de pasteurizacion, en 12 h con am/pm.
+ * [horaInicial] viene como "HH:mm"; si esta vacia arranca en la hora actual.
+ * [alBorrar] es null cuando no hay nada que borrar.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelectorHora(
+    horaInicial: String,
+    alElegir: (String) -> Unit,
+    alBorrar: (() -> Unit)?,
+    alCerrar: () -> Unit,
+) {
+    val (h, m) = horaYMinutos(horaInicial) ?: Calendar.getInstance().let {
+        it.get(Calendar.HOUR_OF_DAY) to it.get(Calendar.MINUTE)
+    }
+    val estado = rememberTimePickerState(initialHour = h, initialMinute = m, is24Hour = false)
+    AlertDialog(
+        onDismissRequest = alCerrar,
+        title = { Text("Hora de pasteurizacion") },
+        text = { TimePicker(state = estado) },
+        confirmButton = {
+            TextButton(onClick = {
+                alElegir(horaGuardada(estado.hour, estado.minute))
+                alCerrar()
+            }) { Text("Aceptar") }
+        },
+        dismissButton = {
+            Row {
+                if (alBorrar != null) {
+                    TextButton(onClick = {
+                        alBorrar()
+                        alCerrar()
+                    }) { Text("Borrar") }
+                }
+                TextButton(onClick = alCerrar) { Text("Cancelar") }
+            }
+        },
+    )
 }
 
 /** Genera el .xlsx y deja elegir entre compartirlo o guardarlo en el telefono. */

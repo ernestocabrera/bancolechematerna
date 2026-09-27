@@ -41,6 +41,19 @@ resultado.
 
 Las constantes viven en `datos/Calculo.kt` (`object Formula`).
 
+## La tabla del proceso
+
+Cada fila tiene, de izquierda a derecha: **Nro** (fija, no se desplaza), **Acidez**
+(3 enteros), **Crematocrito** (las lecturas y los calculos de arriba), **Pasteurizacion**
+(hora + Baño M, Punto frio, Agua en °C) y el boton de eliminar al final.
+
+- Acidez y Pasteurizacion son solo registro: **no entran en ningun calculo**.
+- Acidez acepta cualquier entero, pero fuera de `ACIDEZ_NORMAL` (2..8) se pinta en rojo.
+- La hora no se teclea: se elige en un reloj de 12 h. Se guarda como `"HH:mm"` en 24 h
+  y se muestra como `02:30 pm` (`horaLegible`).
+- Las temperaturas admiten un decimal; la coma se convierte en punto.
+- Las secciones se muestran u ocultan desde un menu (`Secciones`); Nro siempre se ve.
+
 ## Estructura
 
 ```
@@ -56,6 +69,8 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
 
 - **Sin tests.** Se quitaron a proposito; no agregarlos salvo que se pidan.
 - **SQLite a mano, sin Room.** Son dos tablas; evita KSP y problemas de version en el build.
+  Al agregar columnas: subir `BD_VERSION`, sumarlas en `onCreate` y en `onUpgrade`
+  (`ALTER TABLE ... ADD COLUMN`), para no perder los datos de telefonos ya instalados.
 - **Sin Apache POI.** Pesa demasiado en Android; `Xlsx.kt` genera el zip + XML directo.
   Verificado con POI del lado del escritorio: se lee sin errores.
 - **Las lecturas se guardan como TEXT**, no como enteros, para que una casilla a medio

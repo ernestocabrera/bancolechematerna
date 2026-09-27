@@ -3,7 +3,6 @@ package com.example.bancodelechematerna.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bancodelechematerna.datos.LECTURAS
 import com.example.bancodelechematerna.datos.Muestra
 import com.example.bancodelechematerna.datos.Proceso
 import com.example.bancodelechematerna.datos.Repositorio
@@ -78,15 +77,17 @@ class ProcesosViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun cambiarNumero(procesoId: Long, muestraId: Long, numero: String) {
-        editarMuestra(procesoId, muestraId) { it.copy(numero = numero) }
-    }
-
-    fun cambiarLectura(procesoId: Long, muestraId: Long, indice: Int, valor: String) {
-        require(indice in 0 until LECTURAS)
-        editarMuestra(procesoId, muestraId) { muestra ->
-            muestra.copy(lecturas = muestra.lecturas.toMutableList().also { it[indice] = valor })
+    /** Aplica un cambio a una fila (una casilla tecleada, la hora...) y lo guarda. */
+    fun editarMuestra(procesoId: Long, muestraId: Long, bloque: (Muestra) -> Muestra) {
+        var editada: Muestra? = null
+        editarProceso(procesoId) { proceso ->
+            proceso.copy(
+                muestras = proceso.muestras.map { muestra ->
+                    if (muestra.id != muestraId) muestra else bloque(muestra).also { editada = it }
+                }
+            )
         }
+        editada?.let { muestra -> enBd { repo.guardarMuestra(muestra) } }
     }
 
     fun eliminarMuestra(procesoId: Long, muestraId: Long) {
@@ -100,18 +101,6 @@ class ProcesosViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ------------------------------------------------------------------ ayudas
-
-    private fun editarMuestra(procesoId: Long, muestraId: Long, bloque: (Muestra) -> Muestra) {
-        var editada: Muestra? = null
-        editarProceso(procesoId) { proceso ->
-            proceso.copy(
-                muestras = proceso.muestras.map { muestra ->
-                    if (muestra.id != muestraId) muestra else bloque(muestra).also { editada = it }
-                }
-            )
-        }
-        editada?.let { muestra -> enBd { repo.guardarMuestra(muestra) } }
-    }
 
     private fun editarProceso(procesoId: Long, bloque: (Proceso) -> Proceso) {
         _procesos.update { lista ->
