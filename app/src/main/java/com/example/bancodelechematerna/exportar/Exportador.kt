@@ -1,9 +1,14 @@
 package com.example.bancodelechematerna.exportar
 
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.provider.DocumentsContract
+import android.media.MediaScannerConnection
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.example.bancodelechematerna.datos.COLUMNAS
 import com.example.bancodelechematerna.datos.Muestra
@@ -18,6 +23,9 @@ import java.io.File
 import java.io.OutputStream
 
 const val TIPO_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+/** Subcarpeta de Descargas donde se guardan los Word. */
+private const val CARPETA = "Banco de Leche"
 
 /**
  * Los tres modelos en papel del banco de leche. Cada uno es una plantilla .docx en
@@ -87,22 +95,63 @@ object Exportador {
     }
 
     /**
-     * Escribe cada modelo en la carpeta que eligio el usuario. Si ya hay un archivo con
-     * ese nombre, el sistema le agrega un numero en vez de pisarlo.
+     * Donde queda lo guardado, para decirselo al usuario. La carpeta real se llama
+     * "Download" (algunas apps de archivos la traducen a "Descargas" y otras no).
      */
-    fun generarEnCarpeta(context: Context, carpeta: Uri, modelos: List<Modelo>, proceso: Proceso) {
-        val resolver = context.contentResolver
-        val padre = DocumentsContract.buildDocumentUriUsingTree(
-            carpeta, DocumentsContract.getTreeDocumentId(carpeta)
-        )
+    const val CARPETA_LEGIBLE = "Memoria interna › Download › $CARPETA"
+
+    /** Android 7 a 9 necesita el permiso de almacenamiento para escribir en Descargas. */
+    val necesitaPermiso: Boolean get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+    /**
+     * Guarda cada modelo en Descargas/Banco de Leche, sin selector de carpetas: el de
+     * Android no deja elegir Descargas y en muchos telefonos no muestra las carpetas.
+     * Si el archivo ya existe (se exporta de nuevo el mismo dia), se sobrescribe.
+     */
+    fun guardarEnDescargas(context: Context, modelos: List<Modelo>, proceso: Proceso) {
         modelos.forEach { modelo ->
-            val destino = DocumentsContract.createDocument(
-                resolver, padre, TIPO_DOCX, nombreArchivo(modelo, proceso)
-            ) ?: error("No se pudo crear ${nombreArchivo(modelo, proceso)}")
-            resolver.openOutputStream(destino, "wt")?.use {
-                escribir(context, modelo, proceso, it)
-            } ?: error("No se pudo abrir ${nombreArchivo(modelo, proceso)}")
+            val nombre = nombreArchivo(modelo, proceso)
+            if (necesitaPermiso) {
+                @Suppress("DEPRECATION")
+                val carpeta = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    CARPETA,
+                ).apply { mkdirs() }
+                val archivo = File(carpeta, nombre)
+                archivo.outputStream().use { escribir(context, modelo, proceso, it) }
+                MediaScannerConnection.scanFile(context, arrayOf(archivo.path), arrayOf(TIPO_DOCX), null)
+            } else {
+                guardarConMediaStore(context, nombre) { escribir(context, modelo, proceso, it) }
+            }
         }
+    }
+
+    /**
+     * Desde Android 10 se escribe en Descargas por MediaStore, sin pedir permisos. La app
+     * solo ve (y puede sobrescribir) los archivos que creo ella misma.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun guardarConMediaStore(context: Context, nombre: String, contenido: (OutputStream) -> Unit) {
+        val resolver = context.contentResolver
+        val coleccion = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val rutaRelativa = "${Environment.DIRECTORY_DOWNLOADS}/$CARPETA/"
+
+        val existente = resolver.query(
+            coleccion,
+            arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
+            arrayOf(nombre, rutaRelativa),
+            null,
+        )?.use { c -> if (c.moveToFirst()) ContentUris.withAppendedId(coleccion, c.getLong(0)) else null }
+
+        val destino = existente ?: resolver.insert(coleccion, ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, nombre)
+            put(MediaStore.MediaColumns.MIME_TYPE, TIPO_DOCX)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, rutaRelativa)
+        }) ?: error("No se pudo crear $nombre")
+
+        resolver.openOutputStream(destino, "wt")?.use(contenido)
+            ?: error("No se pudo abrir $nombre")
     }
 
     fun compartir(context: Context, archivos: List<File>) {

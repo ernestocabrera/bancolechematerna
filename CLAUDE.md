@@ -82,7 +82,10 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
   y llena `word/document.xml`. Cada plantilla debe tener un texto `FECHA: ____` y una
   sola tabla con el encabezado y filas vacias (que ya traen el formato). Si hay mas datos
   que filas, se agregan copias. Se exporta **por proceso**: uno, varios o los tres modelos
-  (Compartir los manda juntos; Guardar pide una carpeta y deja un .docx por modelo).
+  (Compartir los manda juntos; Guardar los deja en Memoria interna › Download › Banco de Leche, un .docx por
+  modelo, sobrescribiendo si ya existen). Sin selector de carpetas a proposito: el de
+  Android no deja elegir Descargas y en muchos telefonos no muestra las carpetas. Desde
+  Android 10 va por MediaStore sin permisos; en 7-9 pide WRITE_EXTERNAL_STORAGE.
   En el Word todo va centrado menos la columna Nro, y la acidez fuera de rango va en rojo.
   Cambios hechos a las plantillas originales: Acidez pasada de .odt a .docx, corregido
   "T. DE CREMA 2" repetido (la primera es 1), quitada la hoja en blanco final de

@@ -1,6 +1,8 @@
 package com.example.bancodelechematerna.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
@@ -33,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.example.bancodelechematerna.datos.Proceso
 import com.example.bancodelechematerna.datos.horaGuardada
 import com.example.bancodelechematerna.datos.horaActual
@@ -106,7 +110,7 @@ fun SelectorHora(
 }
 
 /**
- * Marcar uno, varios o los tres modelos de Word y compartirlos o guardarlos juntos.
+ * Marcar uno, varios o los tres modelos de Word y compartirlos o guardarlos en Descargas.
  * Un modelo sin filas con datos en su seccion no se puede marcar.
  */
 @Composable
@@ -123,26 +127,27 @@ fun DialogoExportar(
     // En el orden de la lista, no en el que se fueron marcando.
     val seleccion = Modelo.entries.filter { it in elegidos }
 
-    val guardarEnCarpeta = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { carpeta ->
-        if (carpeta == null) {
-            alCerrar()
-        } else {
-            alcance.launch {
-                val fallo = withContext(Dispatchers.IO) {
-                    runCatching {
-                        Exportador.generarEnCarpeta(contexto, carpeta, seleccion, proceso)
-                    }.exceptionOrNull()
-                }
-                avisar(
-                    contexto,
-                    if (fallo == null) "${seleccion.size} archivo(s) guardado(s)"
-                    else "No se pudo guardar: ${fallo.message}"
-                )
-                alCerrar()
+    fun guardar() {
+        trabajando = true
+        alcance.launch {
+            val fallo = withContext(Dispatchers.IO) {
+                runCatching { Exportador.guardarEnDescargas(contexto, seleccion, proceso) }.exceptionOrNull()
             }
+            avisar(
+                contexto,
+                if (fallo == null) "Guardado en ${Exportador.CARPETA_LEGIBLE}"
+                else "No se pudo guardar: ${fallo.message}"
+            )
+            alCerrar()
         }
+    }
+
+    // Solo se usa en Android 7 a 9; desde el 10 no hace falta permiso.
+    val pedirPermiso = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { concedido ->
+        if (concedido) guardar()
+        else avisar(contexto, "Sin permiso de almacenamiento no se puede guardar. Usa Compartir.")
     }
 
     AlertDialog(
@@ -182,6 +187,12 @@ fun DialogoExportar(
                         }
                     }
                 }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Guardar los deja en ${Exportador.CARPETA_LEGIBLE}.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
@@ -206,7 +217,12 @@ fun DialogoExportar(
         dismissButton = {
             TextButton(
                 enabled = seleccion.isNotEmpty() && !trabajando,
-                onClick = { guardarEnCarpeta.launch(null) },
+                onClick = {
+                    val falta = Exportador.necesitaPermiso && ContextCompat.checkSelfPermission(
+                        contexto, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) != PackageManager.PERMISSION_GRANTED
+                    if (falta) pedirPermiso.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) else guardar()
+                },
             ) { Text("Guardar") }
         },
     )
