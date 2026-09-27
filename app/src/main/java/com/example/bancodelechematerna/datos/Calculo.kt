@@ -2,7 +2,6 @@ package com.example.bancodelechematerna.datos
 
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.math.round
 
 /**
  * Constantes del protocolo con el que se calcula en el banco de leche.
@@ -27,7 +26,7 @@ fun redondear(valor: Double, decimales: Int = 1): Double {
 /** Resultado de una fila. Cualquier campo puede ser null si faltan lecturas. */
 data class Resultado(
     val promTotal: Double? = null,   // P1: promedio de las columnas totales
-    val promCrema: Int? = null,   // P2: promedio de las columnas de crema
+    val promCrema: Int? = null,      // P2: promedio de las columnas de crema, entero
     val porcCrema: Double? = null,
     val porcGrasa: Double? = null,
     val kcal: Double? = null,
@@ -39,8 +38,7 @@ data class Resultado(
  */
 fun calcular(totales: List<Int?>, cremas: List<Int?>): Resultado {
     val p1 = promedio(totales)
-    //val p2 = cremas.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key ?: 0
-    val p2 = round(promedio(cremas)?:0.0).toInt()
+    val p2 = promedioEntero(cremas)
     if (p1 == null || p2 == null || p1 == 0.0) return Resultado(p1, p2)
 
     val crema = redondear(p2 * 100.0 / p1)
@@ -54,4 +52,16 @@ private fun promedio(valores: List<Int?>): Double? {
     val presentes = valores.filterNotNull()
     if (presentes.isEmpty()) return null
     return redondear(presentes.sum().toDouble() / presentes.size)
+}
+
+/**
+ * Promedia solo las lecturas que esten escritas y redondea a entero desde el valor
+ * exacto, no desde el ya redondeado a un decimal. 0.5 sube.
+ */
+private fun promedioEntero(valores: List<Int?>): Int? {
+    val presentes = valores.filterNotNull()
+    if (presentes.isEmpty()) return null
+    return BigDecimal(presentes.sum())
+        .divide(BigDecimal(presentes.size), 0, RoundingMode.HALF_UP)
+        .toInt()
 }

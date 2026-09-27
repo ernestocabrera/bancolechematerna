@@ -11,31 +11,40 @@ numeros: la **columna total** (tipico 60-100) y la **columna de crema** (tipico 
 
 ```
 P1 = promedio de las tres columnas totales   -> redondeado a 1 decimal
-P2 = promedio de las tres columnas de crema  -> redondeado a 1 decimal
+P2 = promedio de las tres columnas de crema  -> redondeado a ENTERO (0.5 sube)
 % Crema = P2 * 100 / P1                      -> redondeado a 1 decimal
 % Grasa = % Crema - 0.59 / 1.46              -> redondeado a 1 decimal
 Kcal/L  = % Crema * 66.8 + 290               -> redondeado a 1 decimal
 ```
 
-Dos cosas que **no** son descuidos y no hay que "arreglar" sin hablarlo antes:
+Tres cosas que **no** son descuidos y no hay que "arreglar" sin hablarlo antes:
 
 1. **Cada paso usa el resultado ya redondeado del paso anterior**, no el valor exacto.
    Es como se hace a lapiz en el hospital y la app tiene que dar el mismo numero.
-2. **La formula de % Grasa esta mal de origen**: deberia ser `(% Crema - 0.59) / 1.46`.
+2. **P2 es un entero.** Se redondea a entero directamente desde el promedio exacto
+   (no desde el promedio ya redondeado a 1 decimal, eso redondearia dos veces).
+   En el modelo es `Resultado.promCrema: Int?`; en la tabla y el Excel sale sin decimales.
+3. **La formula de % Grasa esta mal de origen**: deberia ser `(% Crema - 0.59) / 1.46`.
    Un libro local la publico sin los parentesis y asi la usan. Se replica a proposito.
    Corregirla cambia todos los resultados historicos.
 
-El redondeo es "de escuela" (0.05 sube), via `BigDecimal.valueOf(...).setScale(1, HALF_UP)`.
-El redondeo por defecto de Java no se comporta asi.
+El redondeo es "de escuela" (0.05 sube, y 0.5 sube a entero), siempre con `BigDecimal`
+y `RoundingMode.HALF_UP`. El redondeo por defecto de Java no se comporta asi, y
+`kotlin.math.round` redondea al par (4.5 -> 4): no usarlo.
 
-El unico total del proceso es el **promedio de los % Grasa** de las filas que tengan datos.
+Una fila solo da resultados si tiene al menos una lectura total **y** una de crema;
+si falta alguna de las dos, % Crema, % Grasa y Kcal quedan vacios.
+Se promedian solo las casillas escritas (una fila con dos columnas llenas promedia dos).
+
+El unico total del proceso es el **promedio de los % Grasa** de las filas que tengan
+resultado.
 
 Las constantes viven en `datos/Calculo.kt` (`object Formula`).
 
 ## Estructura
 
 ```
-datos/     Calculo.kt   formulas y redondeo (sin dependencias de Android, testeable)
+datos/     Calculo.kt   formulas y redondeo (sin dependencias de Android)
            Modelos.kt   Proceso, Muestra, manejo de fechas
            BaseDatos.kt SQLiteOpenHelper + Repositorio
 exportar/  Xlsx.kt      escritor .xlsx minimo, hecho a mano (sin Apache POI)
@@ -45,6 +54,7 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
 
 ### Decisiones a tener en cuenta
 
+- **Sin tests.** Se quitaron a proposito; no agregarlos salvo que se pidan.
 - **SQLite a mano, sin Room.** Son dos tablas; evita KSP y problemas de version en el build.
 - **Sin Apache POI.** Pesa demasiado en Android; `Xlsx.kt` genera el zip + XML directo.
   Verificado con POI del lado del escritorio: se lee sin errores.
@@ -62,6 +72,5 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
 
 ```
 ./gradlew :app:assembleDebug        # compilar
-./gradlew :app:testDebugUnitTest    # tests de formulas y del .xlsx
 ./gradlew :app:installDebug         # instalar en emulador/telefono conectado
 ```
