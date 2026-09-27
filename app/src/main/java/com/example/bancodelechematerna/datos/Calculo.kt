@@ -17,6 +17,26 @@ object Formula {
     const val KCAL_BASE = 290.0
 }
 
+/**
+ * Rangos de Kcal/L para contar cuantas muestras del proceso caen en cada uno.
+ * Cada limite pertenece al rango de abajo: x <= 500, 500 < x <= 650, 650 < x <= 750,
+ * 750 < x <= 800, x > 800. Asi 650.0 cuenta en 500-650.
+ */
+object RangosKcal {
+    val LIMITES = listOf(500.0, 650.0, 750.0, 800.0)
+
+    /** "≤500", "500-650", "650-750", "750-800", ">800". */
+    val NOMBRES: List<String> = buildList {
+        val l = LIMITES.map { it.toInt() }
+        add("≤${l.first()}")
+        l.zipWithNext { a, b -> add("$a-$b") }
+        add(">${l.last()}")
+    }
+
+    /** Posicion del rango (0 a 4) donde cae [kcal]. */
+    fun indice(kcal: Double): Int = LIMITES.count { kcal > it }
+}
+
 /** Redondeo "de escuela": 0.05 sube. El de Java por defecto no se comporta asi. */
 fun redondear(valor: Double, decimales: Int = 1): Double {
     if (valor.isNaN() || valor.isInfinite()) return valor

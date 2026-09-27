@@ -93,6 +93,14 @@ data class Proceso(
             if (grasas.isEmpty()) return null
             return redondear(grasas.sum() / grasas.size)
         }
+
+    /** Cuantas filas con Kcal calculada caen en cada uno de los [RangosKcal]. */
+    val cantidadesPorRangoKcal: List<Int>
+        get() {
+            val cantidades = MutableList(RangosKcal.NOMBRES.size) { 0 }
+            muestras.mapNotNull { it.resultado.kcal }.forEach { cantidades[RangosKcal.indice(it)]++ }
+            return cantidades
+        }
 }
 
 /**

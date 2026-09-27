@@ -70,6 +70,7 @@ import com.example.bancodelechematerna.datos.COLUMNAS
 import com.example.bancodelechematerna.datos.LECTURAS
 import com.example.bancodelechematerna.datos.Muestra
 import com.example.bancodelechematerna.datos.Proceso
+import com.example.bancodelechematerna.datos.RangosKcal
 import com.example.bancodelechematerna.datos.TEMPERATURAS
 import com.example.bancodelechematerna.datos.aTexto
 import com.example.bancodelechematerna.datos.acidezFueraDeRango
@@ -592,33 +593,73 @@ private fun PieResumen(proceso: Proceso) {
     ) {
         // El fondo llega hasta el borde, pero el contenido se aparta de la barra de
         // navegacion. Con el teclado abierto, imePadding ya consumio ese espacio.
-        Row(
+        Column(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 10.dp)
         ) {
-            Column {
+            val color = MaterialTheme.colorScheme.onPrimaryContainer
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        "Promedio % Grasa del proceso",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = color,
+                    )
+                    Text(
+                        "${proceso.muestras.size} fila(s)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = color.copy(alpha = 0.7f),
+                    )
+                }
                 Text(
-                    "Promedio % Grasa del proceso",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "${proceso.muestras.size} fila(s)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    proceso.promedioGrasa.aTexto(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = color,
                 )
             }
-            Text(
-                proceso.promedioGrasa.aTexto(),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            Spacer(Modifier.height(6.dp))
+            RangosKcalResumen(proceso.cantidadesPorRangoKcal)
+        }
+    }
+}
+
+/** Una fila de cinco casillas: el rango de Kcal arriba y cuantas muestras caen debajo. */
+@Composable
+private fun RangosKcalResumen(cantidades: List<Int>) {
+    val color = MaterialTheme.colorScheme.onPrimaryContainer
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        RangosKcal.NOMBRES.forEachIndexed { i, nombre ->
+            val cantidad = cantidades[i]
+            Column(
+                Modifier
+                    .weight(1f)
+                    .background(color.copy(alpha = 0.08f), RoundedCornerShape(6.dp))
+                    .padding(vertical = 3.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    nombre,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color.copy(alpha = 0.75f),
+                )
+                Text(
+                    "$cantidad",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (cantidad == 0) color.copy(alpha = 0.4f) else color,
+                )
+            }
         }
     }
 }

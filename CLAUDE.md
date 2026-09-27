@@ -36,8 +36,12 @@ Una fila solo da resultados si tiene al menos una lectura total **y** una de cre
 si falta alguna de las dos, % Crema, % Grasa y Kcal quedan vacios.
 Se promedian solo las casillas escritas (una fila con dos columnas llenas promedia dos).
 
-El unico total del proceso es el **promedio de los % Grasa** de las filas que tengan
-resultado.
+Totales del proceso (en el pie de la pantalla), contando solo filas con resultado:
+
+- **Promedio de los % Grasa.**
+- **Cuantas filas caen en cada rango de Kcal**: x <= 500, 500 < x <= 650, 650 < x <= 750,
+  750 < x <= 800, x > 800. Cada limite cuenta en el rango de abajo (650.0 va en 500-650).
+  Viven en `RangosKcal`.
 
 Las constantes viven en `datos/Calculo.kt` (`object Formula`).
 
