@@ -75,6 +75,7 @@ import com.example.bancodelechematerna.datos.TEMPERATURAS
 import com.example.bancodelechematerna.datos.aTexto
 import com.example.bancodelechematerna.datos.acidezFueraDeRango
 import com.example.bancodelechematerna.datos.fechaLegible
+import com.example.bancodelechematerna.datos.horaActual
 import com.example.bancodelechematerna.datos.horaLegible
 import com.example.bancodelechematerna.datos.totalTexto
 
@@ -400,7 +401,7 @@ private fun FilaMuestra(
                     largoMax = 5,
                     tipo = Tipo.DECIMAL,
                     sufijo = "°C",
-                    alCambiar = { v -> alEditar { it.conTemperatura(i, v) } },
+                    alCambiar = { v -> alEditar { it.conTemperatura(i, v, horaActual()) } },
                 )
             }
         }

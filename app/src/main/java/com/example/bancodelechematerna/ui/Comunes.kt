@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.bancodelechematerna.datos.Proceso
 import com.example.bancodelechematerna.datos.horaGuardada
+import com.example.bancodelechematerna.datos.horaActual
 import com.example.bancodelechematerna.datos.horaYMinutos
 import com.example.bancodelechematerna.exportar.Exportador
 import com.example.bancodelechematerna.exportar.Modelo
@@ -42,7 +43,6 @@ import com.example.bancodelechematerna.exportar.TIPO_DOCX
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,9 +79,7 @@ fun SelectorHora(
     alBorrar: (() -> Unit)?,
     alCerrar: () -> Unit,
 ) {
-    val (h, m) = horaYMinutos(horaInicial) ?: Calendar.getInstance().let {
-        it.get(Calendar.HOUR_OF_DAY) to it.get(Calendar.MINUTE)
-    }
+    val (h, m) = horaYMinutos(horaInicial.ifBlank { horaActual() }) ?: (0 to 0)
     val estado = rememberTimePickerState(initialHour = h, initialMinute = m, is24Hour = false)
     AlertDialog(
         onDismissRequest = alCerrar,

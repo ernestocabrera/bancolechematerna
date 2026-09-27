@@ -53,7 +53,8 @@ Cada fila tiene, de izquierda a derecha: **Nro** (fija, no se desplaza), **Acide
 
 - Acidez y Pasteurizacion son solo registro: **no entran en ningun calculo**.
 - Acidez acepta cualquier entero, pero fuera de `ACIDEZ_NORMAL` (2..8) se pinta en rojo.
-- La hora no se teclea: se elige en un reloj de 12 h. Se guarda como `"HH:mm"` en 24 h
+- La hora no se teclea: se elige en un reloj de 12 h. Al escribir la primera temperatura
+  de una fila sin hora, se le pone la hora del telefono. Se guarda como `"HH:mm"` en 24 h
   y se muestra como `02:30 pm` (`horaLegible`).
 - Las temperaturas admiten un decimal; la coma se convierte en punto.
 - Las secciones se muestran u ocultan desde un menu (`Secciones`); Nro siempre se ve.
@@ -82,6 +83,7 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
   sola tabla con el encabezado y filas vacias (que ya traen el formato). Si hay mas datos
   que filas, se agregan copias. Se exporta **por proceso**: uno, varios o los tres modelos
   (Compartir los manda juntos; Guardar pide una carpeta y deja un .docx por modelo).
+  En el Word todo va centrado menos la columna Nro, y la acidez fuera de rango va en rojo.
   Cambios hechos a las plantillas originales: Acidez pasada de .odt a .docx, corregido
   "T. DE CREMA 2" repetido (la primera es 1), quitada la hoja en blanco final de
   Crematocrito y ensanchada la columna HORA de Pasteurizacion.

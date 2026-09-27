@@ -47,8 +47,14 @@ data class Muestra(
 
     fun conLectura(indice: Int, valor: String) = copy(lecturas = lecturas.cambiar(indice, valor))
     fun conAcidez(indice: Int, valor: String) = copy(acidez = acidez.cambiar(indice, valor))
-    fun conTemperatura(indice: Int, valor: String) =
-        copy(temperaturas = temperaturas.cambiar(indice, valor))
+    /**
+     * Al escribir una temperatura en una fila sin hora, se le pone la hora de ese momento
+     * ([ahora], "HH:mm"). Despues se puede cambiar desde el reloj.
+     */
+    fun conTemperatura(indice: Int, valor: String, ahora: String) = copy(
+        temperaturas = temperaturas.cambiar(indice, valor),
+        hora = if (hora.isBlank() && valor.isNotBlank()) ahora else hora,
+    )
 }
 
 private fun List<String>.cambiar(indice: Int, valor: String): List<String> =
@@ -72,6 +78,11 @@ fun horaYMinutos(hora: String): Pair<Int, Int>? {
 
 fun horaGuardada(hora: Int, minuto: Int): String =
     String.format(Locale.US, "%02d:%02d", hora, minuto)
+
+/** La hora del reloj del telefono, como "HH:mm". */
+fun horaActual(): String = Calendar.getInstance().let {
+    horaGuardada(it.get(Calendar.HOUR_OF_DAY), it.get(Calendar.MINUTE))
+}
 
 /** "14:30" -> "02:30 pm". Vacia si no hay hora. */
 fun horaLegible(hora: String): String {

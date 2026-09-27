@@ -9,6 +9,7 @@ import com.example.bancodelechematerna.datos.COLUMNAS
 import com.example.bancodelechematerna.datos.Muestra
 import com.example.bancodelechematerna.datos.Proceso
 import com.example.bancodelechematerna.datos.aTexto
+import com.example.bancodelechematerna.datos.acidezFueraDeRango
 import com.example.bancodelechematerna.datos.fechaArchivo
 import com.example.bancodelechematerna.datos.fechaLegible
 import com.example.bancodelechematerna.datos.horaLegible
@@ -21,28 +22,32 @@ const val TIPO_DOCX = "application/vnd.openxmlformats-officedocument.wordprocess
 /**
  * Los tres modelos en papel del banco de leche. Cada uno es una plantilla .docx en
  * assets/modelos y se llena con las filas del proceso que tengan datos de su seccion.
+ * Todo va centrado menos la columna Nro ([sinCentrar]).
  */
-enum class Modelo(val nombre: String, val plantilla: String) {
-    ACIDEZ("Acidez", "modelos/acidez.docx"),
-    CREMATOCRITO("Crematocrito", "modelos/crematocrito.docx"),
-    PASTEURIZACION("Pasteurizacion", "modelos/pasteurizacion.docx");
+enum class Modelo(val nombre: String, val plantilla: String, val sinCentrar: Set<Int>) {
+    ACIDEZ("Acidez", "modelos/acidez.docx", setOf(0)),
+    CREMATOCRITO("Crematocrito", "modelos/crematocrito.docx", setOf(0)),
+    PASTEURIZACION("Pasteurizacion", "modelos/pasteurizacion.docx", emptySet());
 
-    /** Una lista de textos por fila, en el orden de las columnas de la plantilla. */
-    fun filas(proceso: Proceso): List<List<String>> = when (this) {
-        // Nro | 1 | 2 | 3
+    /** Una lista de casillas por fila, en el orden de las columnas de la plantilla. */
+    fun filas(proceso: Proceso): List<List<Casilla>> = when (this) {
+        // Nro | 1 | 2 | 3   (la acidez fuera de rango va en rojo, como en la app)
         ACIDEZ -> proceso.muestras
             .filter { m -> m.acidez.any { it.isNotBlank() } }
-            .map { listOf(it.numero) + it.acidez }
+            .map { m -> listOf(Casilla(m.numero)) + m.acidez.map { Casilla(it, acidezFueraDeRango(it)) } }
 
         // NO. | T. de crema 1 | 2 | 3 | Total | %Crema | %Grasa | Kcal
         CREMATOCRITO -> proceso.muestras
             .filter { m -> m.lecturas.any { it.isNotBlank() } }
-            .map { filaCrematocrito(it) }
+            .map { filaCrematocrito(it).map(::Casilla) }
 
         // Hora | Baño M | Punto frio | Agua  (esta plantilla no lleva Nro)
         PASTEURIZACION -> proceso.muestras
             .filter { m -> m.hora.isNotBlank() || m.temperaturas.any { it.isNotBlank() } }
-            .map { m -> listOf(horaLegible(m.hora)) + m.temperaturas.map { if (it.isBlank()) "" else "$it °C" } }
+            .map { m ->
+                (listOf(horaLegible(m.hora)) + m.temperaturas.map { if (it.isBlank()) "" else "$it °C" })
+                    .map(::Casilla)
+            }
     }
 }
 
@@ -123,7 +128,9 @@ object Exportador {
 
     private fun escribir(context: Context, modelo: Modelo, proceso: Proceso, salida: OutputStream) {
         context.assets.open(modelo.plantilla).use { plantilla ->
-            rellenarDocx(plantilla, salida, fechaLegible(proceso.fecha), modelo.filas(proceso))
+            rellenarDocx(
+                plantilla, salida, fechaLegible(proceso.fecha), modelo.filas(proceso), modelo.sinCentrar
+            )
         }
     }
 }
