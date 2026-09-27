@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -25,7 +24,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,8 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.example.bancodelechematerna.datos.Proceso
 import com.example.bancodelechematerna.datos.aTexto
 import com.example.bancodelechematerna.datos.fechaLegible
-import com.example.bancodelechematerna.datos.hoy
-import com.example.bancodelechematerna.datos.sumarDias
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,17 +52,11 @@ fun PantallaProcesos(
     alEliminar: (Long) -> Unit,
 ) {
     var porEliminar by remember { mutableStateOf<Proceso?>(null) }
-    var rangoAbierto by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Procesos") },
-                actions = {
-                    IconButton(onClick = { rangoAbierto = true }) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Exportar por fechas")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -131,9 +121,6 @@ fun PantallaProcesos(
         )
     }
 
-    if (rangoAbierto) {
-        DialogoRango(procesos = procesos, alCerrar = { rangoAbierto = false })
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,75 +174,5 @@ private fun TarjetaProceso(
                 )
             }
         }
-    }
-}
-
-/** Elegir desde/hasta y exportar todos los procesos de ese rango en un solo archivo. */
-@Composable
-private fun DialogoRango(
-    procesos: List<Proceso>,
-    alCerrar: () -> Unit,
-) {
-    var desde by remember { mutableStateOf(sumarDias(hoy(), -30)) }
-    var hasta by remember { mutableStateOf(hoy()) }
-    var eligiendo by remember { mutableStateOf<String?>(null) }
-    var exportando by remember { mutableStateOf(false) }
-
-    val seleccion = procesos.filter { it.fecha in desde..hasta }.sortedBy { it.fecha }
-
-    if (exportando) {
-        DialogoExportar(procesos = seleccion, alCerrar = { exportando = false; alCerrar() })
-        return
-    }
-
-    AlertDialog(
-        onDismissRequest = alCerrar,
-        title = { Text("Exportar por fechas") },
-        text = {
-            Column {
-                OutlinedButton(
-                    onClick = { eligiendo = "desde" },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Desde:  ${fechaLegible(desde)}") }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { eligiendo = "hasta" },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Hasta:  ${fechaLegible(hasta)}") }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "${seleccion.size} proceso(s) en el rango",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = seleccion.isNotEmpty(),
-                onClick = { exportando = true },
-            ) { Text("Continuar") }
-        },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
-    )
-
-    when (eligiendo) {
-        "desde" -> SelectorFecha(
-            fechaInicial = desde,
-            alElegir = { elegida ->
-                desde = elegida
-                if (hasta < elegida) hasta = elegida
-            },
-            alCerrar = { eligiendo = null },
-        )
-
-        "hasta" -> SelectorFecha(
-            fechaInicial = hasta,
-            alElegir = { elegida ->
-                hasta = elegida
-                if (desde > elegida) desde = elegida
-            },
-            alCerrar = { eligiendo = null },
-        )
     }
 }

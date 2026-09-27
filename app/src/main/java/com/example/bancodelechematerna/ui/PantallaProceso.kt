@@ -76,6 +76,7 @@ import com.example.bancodelechematerna.datos.aTexto
 import com.example.bancodelechematerna.datos.acidezFueraDeRango
 import com.example.bancodelechematerna.datos.fechaLegible
 import com.example.bancodelechematerna.datos.horaLegible
+import com.example.bancodelechematerna.datos.totalTexto
 
 private val ESPACIO = 6.dp
 private val ANCHO_NRO = 40.dp
@@ -149,7 +150,7 @@ fun PantallaProceso(
                 actions = {
                     MenuSecciones(secciones, alCambiarSecciones)
                     IconButton(onClick = { exportando = true }) {
-                        Icon(Icons.Default.Share, contentDescription = "Exportar a Excel")
+                        Icon(Icons.Default.Share, contentDescription = "Exportar a Word")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -221,7 +222,7 @@ fun PantallaProceso(
     }
 
     if (exportando) {
-        DialogoExportar(procesos = listOf(proceso), alCerrar = { exportando = false })
+        DialogoExportar(proceso = proceso, alCerrar = { exportando = false })
     }
 
     porEliminar?.let { muestra ->
@@ -385,7 +386,7 @@ private fun FilaMuestra(
             }
         }
         if (secciones.calculos) {
-            CeldaResultado("${r.promTotal.aTexto()} : ${r.promCrema ?: "—"}", ANCHO_TOTAL)
+            CeldaResultado(r.totalTexto(), ANCHO_TOTAL)
             CeldaResultado(r.porcCrema.aTexto(), ANCHO_PORC)
             CeldaResultado(r.porcGrasa.aTexto(), ANCHO_PORC)
             CeldaResultado(r.kcal.aTexto(), ANCHO_KCAL)

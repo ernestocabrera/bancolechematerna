@@ -125,13 +125,9 @@ fun hoy(): Long {
     }.timeInMillis
 }
 
-/** Suma dias a una fecha guardada (se usa para los rangos de exportacion). */
-fun sumarDias(millis: Long, dias: Int): Long =
-    Calendar.getInstance(UTC).apply {
-        timeInMillis = millis
-        add(Calendar.DAY_OF_MONTH, dias)
-    }.timeInMillis
-
 /** Formatea un resultado a un decimal, o "—" si todavia no se puede calcular. */
 fun Double?.aTexto(): String =
     if (this == null) "—" else String.format(Locale.US, "%.1f", this)
+
+/** La casilla Total: "P1 : P2", por ejemplo "86.7 : 5". */
+fun Resultado.totalTexto(): String = "${promTotal.aTexto()} : ${promCrema ?: "—"}"

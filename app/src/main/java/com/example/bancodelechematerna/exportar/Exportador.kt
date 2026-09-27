@@ -3,122 +3,127 @@ package com.example.bancodelechematerna.exportar
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.core.content.FileProvider
 import com.example.bancodelechematerna.datos.COLUMNAS
+import com.example.bancodelechematerna.datos.Muestra
 import com.example.bancodelechematerna.datos.Proceso
+import com.example.bancodelechematerna.datos.aTexto
 import com.example.bancodelechematerna.datos.fechaArchivo
 import com.example.bancodelechematerna.datos.fechaLegible
+import com.example.bancodelechematerna.datos.horaLegible
+import com.example.bancodelechematerna.datos.totalTexto
 import java.io.File
+import java.io.OutputStream
 
-const val TIPO_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+const val TIPO_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 /**
- * Los dos numeros de cada columna no tienen nombre en el modelo de papel, asi que el
- * encabezado solo lleva el numero del grupo (1, 2, 3) sobre la primera de sus dos celdas.
- * Igual con "Total", que en el papel es una sola casilla con los dos promedios.
+ * Los tres modelos en papel del banco de leche. Cada uno es una plantilla .docx en
+ * assets/modelos y se llena con las filas del proceso que tengan datos de su seccion.
  */
-private val ENCABEZADOS = buildList {
-    add("Nro")
-    repeat(COLUMNAS) { add("${it + 1}"); add("") }
-    add("Total")
-    add("")
-    add("% Crema")
-    add("% Grasa")
-    add("Kcal")
+enum class Modelo(val nombre: String, val plantilla: String) {
+    ACIDEZ("Acidez", "modelos/acidez.docx"),
+    CREMATOCRITO("Crematocrito", "modelos/crematocrito.docx"),
+    PASTEURIZACION("Pasteurizacion", "modelos/pasteurizacion.docx");
+
+    /** Una lista de textos por fila, en el orden de las columnas de la plantilla. */
+    fun filas(proceso: Proceso): List<List<String>> = when (this) {
+        // Nro | 1 | 2 | 3
+        ACIDEZ -> proceso.muestras
+            .filter { m -> m.acidez.any { it.isNotBlank() } }
+            .map { listOf(it.numero) + it.acidez }
+
+        // NO. | T. de crema 1 | 2 | 3 | Total | %Crema | %Grasa | Kcal
+        CREMATOCRITO -> proceso.muestras
+            .filter { m -> m.lecturas.any { it.isNotBlank() } }
+            .map { filaCrematocrito(it) }
+
+        // Hora | Baño M | Punto frio | Agua  (esta plantilla no lleva Nro)
+        PASTEURIZACION -> proceso.muestras
+            .filter { m -> m.hora.isNotBlank() || m.temperaturas.any { it.isNotBlank() } }
+            .map { m -> listOf(horaLegible(m.hora)) + m.temperaturas.map { if (it.isBlank()) "" else "$it °C" } }
+    }
 }
 
-private val ANCHOS = buildList {
-    add(6.0)
-    repeat(COLUMNAS * 2) { add(9.0) }
-    add(11.0); add(11.0); add(9.0); add(9.0); add(9.0)
+/** Cada columna de lectura va en una celda como "total : crema", igual que el Total. */
+private fun filaCrematocrito(m: Muestra): List<String> {
+    val r = m.resultado
+    return buildList {
+        add(m.numero)
+        repeat(COLUMNAS) { add(par(m.lecturas[it * 2], m.lecturas[it * 2 + 1])) }
+        add(if (r.promTotal == null) "" else r.totalTexto())
+        add(r.porcCrema.enCelda())
+        add(r.porcGrasa.enCelda())
+        add(r.kcal.enCelda())
+    }
 }
+
+private fun par(total: String, crema: String): String =
+    if (total.isBlank() && crema.isBlank()) "" else "${total.ifBlank { "—" }} : ${crema.ifBlank { "—" }}"
+
+/** En el papel, lo que no se pudo calcular queda en blanco (no con raya). */
+private fun Double?.enCelda(): String = if (this == null) "" else aTexto()
 
 object Exportador {
 
-    /** Nombre sugerido del archivo, segun sea un proceso o un rango. */
-    fun nombreArchivo(procesos: List<Proceso>): String = when {
-        procesos.isEmpty() -> "Procesos.xlsx"
-        procesos.size == 1 -> "Proceso ${fechaArchivo(procesos[0].fecha)}.xlsx"
-        else -> {
-            val fechas = procesos.map { it.fecha }
-            "Procesos ${fechaArchivo(fechas.min())} a ${fechaArchivo(fechas.max())}.xlsx"
-        }
-    }
+    fun nombreArchivo(modelo: Modelo, proceso: Proceso): String =
+        "${modelo.nombre} ${fechaArchivo(proceso.fecha)}.docx"
 
-    /** Deja el archivo en la cache de la app, listo para compartir. */
-    fun generarEnCache(context: Context, procesos: List<Proceso>): File {
+    /** Deja los archivos en la cache de la app, listos para compartir. */
+    fun generarEnCache(context: Context, modelos: List<Modelo>, proceso: Proceso): List<File> {
         val carpeta = File(context.cacheDir, "exportes").apply { mkdirs() }
         carpeta.listFiles()?.forEach { it.delete() }
-        val archivo = File(carpeta, nombreArchivo(procesos))
-        archivo.outputStream().use { escribirXlsx(it, construirHojas(procesos)) }
-        return archivo
+        return modelos.map { modelo ->
+            File(carpeta, nombreArchivo(modelo, proceso)).also { archivo ->
+                archivo.outputStream().use { escribir(context, modelo, proceso, it) }
+            }
+        }
     }
 
-    /** Escribe directamente en el destino que eligio el usuario (Guardar como...). */
-    fun generarEn(context: Context, destino: Uri, procesos: List<Proceso>) {
-        context.contentResolver.openOutputStream(destino, "wt")?.use {
-            escribirXlsx(it, construirHojas(procesos))
-        } ?: error("No se pudo abrir el destino")
-    }
-
-    fun compartir(context: Context, archivo: File) {
-        val uri = FileProvider.getUriForFile(
-            context, "${context.packageName}.fileprovider", archivo
+    /**
+     * Escribe cada modelo en la carpeta que eligio el usuario. Si ya hay un archivo con
+     * ese nombre, el sistema le agrega un numero en vez de pisarlo.
+     */
+    fun generarEnCarpeta(context: Context, carpeta: Uri, modelos: List<Modelo>, proceso: Proceso) {
+        val resolver = context.contentResolver
+        val padre = DocumentsContract.buildDocumentUriUsingTree(
+            carpeta, DocumentsContract.getTreeDocumentId(carpeta)
         )
-        val envio = Intent(Intent.ACTION_SEND).apply {
-            type = TIPO_XLSX
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, archivo.nameWithoutExtension)
+        modelos.forEach { modelo ->
+            val destino = DocumentsContract.createDocument(
+                resolver, padre, TIPO_DOCX, nombreArchivo(modelo, proceso)
+            ) ?: error("No se pudo crear ${nombreArchivo(modelo, proceso)}")
+            resolver.openOutputStream(destino, "wt")?.use {
+                escribir(context, modelo, proceso, it)
+            } ?: error("No se pudo abrir ${nombreArchivo(modelo, proceso)}")
+        }
+    }
+
+    fun compartir(context: Context, archivos: List<File>) {
+        val uris = archivos.map {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)
+        }
+        val envio = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE)
+                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+        }.apply {
+            type = TIPO_DOCX
+            putExtra(Intent.EXTRA_SUBJECT, archivos.joinToString { it.nameWithoutExtension })
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        val titulo = if (archivos.size == 1) "Compartir ${archivos[0].name}"
+        else "Compartir ${archivos.size} archivos"
         context.startActivity(
-            Intent.createChooser(envio, "Compartir ${archivo.name}")
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            Intent.createChooser(envio, titulo).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     }
 
-    internal fun construirHojas(procesos: List<Proceso>): List<Hoja> {
-        if (procesos.isEmpty()) return listOf(Hoja("Sin datos"))
-
-        val usados = mutableMapOf<String, Int>()
-        return procesos.sortedBy { it.fecha }.map { proceso ->
-            val base = fechaLegible(proceso.fecha).replace('/', '-')
-            val repetidos = usados.merge(base, 1, Int::plus)!!
-            val nombre = if (repetidos == 1) base else "$base ($repetidos)"
-            hojaDeProceso(nombre, proceso)
+    private fun escribir(context: Context, modelo: Modelo, proceso: Proceso, salida: OutputStream) {
+        context.assets.open(modelo.plantilla).use { plantilla ->
+            rellenarDocx(plantilla, salida, fechaLegible(proceso.fecha), modelo.filas(proceso))
         }
-    }
-
-    private fun hojaDeProceso(nombre: String, proceso: Proceso): Hoja = Hoja(nombre).apply {
-        anchos = ANCHOS
-
-        fila(texto("Banco de Leche Materna", negrita = true))
-        fila(texto("Fecha:", negrita = true), texto(fechaLegible(proceso.fecha)))
-        filaVacia()
-
-        fila(*ENCABEZADOS.map { texto(it, negrita = true) }.toTypedArray())
-
-        proceso.muestras.forEach { muestra ->
-            val r = muestra.resultado
-            val celdas = buildList {
-                add(texto(muestra.numero))
-                repeat(COLUMNAS) {
-                    add(numero(muestra.totales[it]?.toDouble()))
-                    add(numero(muestra.cremas[it]?.toDouble()))
-                }
-                add(numero(r.promTotal))
-                add(numeroInt(r.promCrema))
-                add(numero(r.porcCrema))
-                add(numero(r.porcGrasa))
-                add(numero(r.kcal))
-            }
-            fila(*celdas.toTypedArray())
-        }
-
-        filaVacia()
-        fila(
-            texto("Promedio % Grasa", negrita = true),
-            numero(proceso.promedioGrasa, negrita = true),
-        )
     }
 }

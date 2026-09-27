@@ -2,7 +2,7 @@
 
 App Android para el banco de leche materna de un hospital: se teclean las lecturas del
 crematocrito de cada muestra, la app calcula % Crema, % Grasa y Kcal/L, guarda los
-procesos por fecha en una base local y los exporta a Excel.
+procesos por fecha en una base local y exporta cada proceso a los modelos de Word del hospital.
 
 ## Los calculos
 
@@ -23,7 +23,7 @@ Tres cosas que **no** son descuidos y no hay que "arreglar" sin hablarlo antes:
    Es como se hace a lapiz en el hospital y la app tiene que dar el mismo numero.
 2. **P2 es un entero.** Se redondea a entero directamente desde el promedio exacto
    (no desde el promedio ya redondeado a 1 decimal, eso redondearia dos veces).
-   En el modelo es `Resultado.promCrema: Int?`; en la tabla y el Excel sale sin decimales.
+   En el modelo es `Resultado.promCrema: Int?`; en la tabla y en el Word sale sin decimales.
 3. **La formula de % Grasa esta mal de origen**: deberia ser `(% Crema - 0.59) / 1.46`.
    Un libro local la publico sin los parentesis y asi la usan. Se replica a proposito.
    Corregirla cambia todos los resultados historicos.
@@ -64,8 +64,9 @@ Cada fila tiene, de izquierda a derecha: **Nro** (fija, no se desplaza), **Acide
 datos/     Calculo.kt   formulas y redondeo (sin dependencias de Android)
            Modelos.kt   Proceso, Muestra, manejo de fechas
            BaseDatos.kt SQLiteOpenHelper + Repositorio
-exportar/  Xlsx.kt      escritor .xlsx minimo, hecho a mano (sin Apache POI)
-           Exportador.kt arma las hojas y comparte/guarda el archivo
+exportar/  Word.kt      rellena una plantilla .docx (sin Apache POI)
+           Exportador.kt los tres modelos (Acidez, Crematocrito, Pasteurizacion), comparte/guarda
+assets/modelos/         las tres plantillas .docx
 ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
 ```
 
@@ -75,8 +76,15 @@ ui/        ProcesosViewModel, PantallaProcesos (lista), PantallaProceso (tabla)
 - **SQLite a mano, sin Room.** Son dos tablas; evita KSP y problemas de version en el build.
   Al agregar columnas: subir `BD_VERSION`, sumarlas en `onCreate` y en `onUpgrade`
   (`ALTER TABLE ... ADD COLUMN`), para no perder los datos de telefonos ya instalados.
-- **Sin Apache POI.** Pesa demasiado en Android; `Xlsx.kt` genera el zip + XML directo.
-  Verificado con POI del lado del escritorio: se lee sin errores.
+- **Exportar a Word con plantillas, sin Apache POI.** POI pesa demasiado en Android.
+  Los tres modelos son los .docx del hospital en `assets/modelos/`; `Word.kt` abre el zip
+  y llena `word/document.xml`. Cada plantilla debe tener un texto `FECHA: ____` y una
+  sola tabla con el encabezado y filas vacias (que ya traen el formato). Si hay mas datos
+  que filas, se agregan copias. Se exporta **por proceso**: uno, varios o los tres modelos
+  (Compartir los manda juntos; Guardar pide una carpeta y deja un .docx por modelo).
+  Cambios hechos a las plantillas originales: Acidez pasada de .odt a .docx, corregido
+  "T. DE CREMA 2" repetido (la primera es 1), quitada la hoja en blanco final de
+  Crematocrito y ensanchada la columna HORA de Pasteurizacion.
 - **Las lecturas se guardan como TEXT**, no como enteros, para que una casilla a medio
   escribir se vea igual que como quedo.
 - **Se escribe en la base en cada tecla**, sobre un dispatcher de un solo hilo
