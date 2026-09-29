@@ -80,7 +80,8 @@ import com.example.bancodelechematerna.datos.horaLegible
 import com.example.bancodelechematerna.datos.totalTexto
 
 private val ESPACIO = 6.dp
-private val ANCHO_NRO = 40.dp
+/** Nro de donante, a veces con consecutivo: "234" o "234.1". */
+private val ANCHO_NRO = 60.dp
 private val ANCHO_ACIDEZ = 44.dp
 private val ANCHO_LECTURA = 44.dp
 private val ANCHO_GRUPO = ANCHO_LECTURA * 2 + ESPACIO
@@ -359,7 +360,7 @@ private fun FilaMuestra(
             CeldaEntrada(
                 valor = muestra.numero,
                 ancho = ANCHO_NRO,
-                largoMax = 4,
+                largoMax = 8,
                 tipo = Tipo.TEXTO,
                 alCambiar = { v -> alEditar { it.copy(numero = v) } },
             )
