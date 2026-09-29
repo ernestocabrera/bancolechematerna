@@ -51,15 +51,18 @@ private fun App(vm: ProcesosViewModel = viewModel()) {
         )
     } else {
         BackHandler { abiertoId = -1L }
+        // Los lambdas capturan el id y no `abierto`, que es un objeto nuevo en cada tecla:
+        // asi no cambian y Compose no redibuja todas las filas al editar una.
+        val id = abierto.id
         PantallaProceso(
             proceso = abierto,
             secciones = secciones,
             alCambiarSecciones = { secciones = it },
             alVolver = { abiertoId = -1L },
-            alCambiarFecha = { vm.cambiarFecha(abierto.id, it) },
-            alAgregarMuestra = { vm.agregarMuestra(abierto.id) },
-            alEditarMuestra = { muestraId, cambio -> vm.editarMuestra(abierto.id, muestraId, cambio) },
-            alEliminarMuestra = { vm.eliminarMuestra(abierto.id, it) },
+            alCambiarFecha = { vm.cambiarFecha(id, it) },
+            alAgregarMuestra = { vm.agregarMuestra(id) },
+            alEditarMuestra = { muestraId, cambio -> vm.editarMuestra(id, muestraId, cambio) },
+            alEliminarMuestra = { vm.eliminarMuestra(id, it) },
         )
     }
 }

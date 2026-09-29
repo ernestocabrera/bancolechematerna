@@ -20,9 +20,17 @@ android {
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
+            // Misma clave que debug: asi la release se instala encima de la version que ya
+            // tiene el telefono sin desinstalar, y no se pierde la base de datos.
+            signingConfig = signingConfigs.getByName("debug")
         }
+    }
+    lint {
+        // El lint de las release pide material-icons-core-desktop:1.7.8, que no esta
+        // publicado, y hace fallar el build. Se puede seguir corriendo a mano con :app:lint.
+        checkReleaseBuilds = false
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

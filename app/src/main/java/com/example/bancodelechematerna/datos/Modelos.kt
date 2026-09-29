@@ -39,7 +39,8 @@ data class Muestra(
     val totales: List<Int?> get() = List(COLUMNAS) { valores[it * 2] }
     val cremas: List<Int?> get() = List(COLUMNAS) { valores[it * 2 + 1] }
 
-    val resultado: Resultado get() = calcular(totales, cremas)
+    /** Se calcula una vez al crear la fila (cada tecla crea una copia nueva). */
+    val resultado: Resultado = calcular(totales, cremas)
 
     val vacia: Boolean
         get() = lecturas.all { it.isBlank() } && acidez.all { it.isBlank() } &&
